@@ -39,6 +39,9 @@ namespace MatchTraceGenerator
         bool PossibleClutch = false;
         long LastAlive;
 
+        // PositionTraces
+        public List<PlayerSnapshot> Snapshots = new List<PlayerSnapshot>();
+
         // Hardcoded plant-sites
         public Dictionary<string, (Vector A, Vector B)> PlantSites = new Dictionary<string, (Vector, Vector)>()
         {
@@ -68,16 +71,19 @@ namespace MatchTraceGenerator
 
             foreach (var player in PlayingParticipants)
             {
+                PlayerStat ThisPlayer = new PlayerStat(player);
                 switch (player.Team)
                 {
                     case Team.Terrorist:
                         TeamMembers.Item1.Add(player.SteamID);
+                        ThisPlayer.InternalTeam = 0;
                         break;
                     case Team.CounterTerrorist:
                         TeamMembers.Item2.Add(player.SteamID);
+                        ThisPlayer.InternalTeam = 1;
                         break;
                 }
-                AllPlayers[player.SteamID] = new PlayerStat(player);
+                AllPlayers[player.SteamID] = ThisPlayer;
             }
             if (TeamMembers.Item1.Count == TeamMembers.Item2.Count && TeamMembers.Item1.Count == 5) ProperlySetTeams = true;
             return (ProperlySetTeams);
@@ -233,6 +239,25 @@ namespace MatchTraceGenerator
                 HashSet<long> CurrentTeam = i == 0 ? ref TeamMembers.Item1 : ref TeamMembers.Item2;
                 CalculateTickCentroids(CurrentTeam);
             }
+        }
+        public void RecordPositions()
+        {
+            foreach (var Player in AllPlayers.Values)
+            {
+                Player.PositionTrace.SetPosition(Player.PlayerEntity);
+            }
+        }
+        public void GetSnapshots()
+        {
+            List<PlayerSnapshot> ReturnSnapshots = new List<PlayerSnapshot>();
+            foreach (var Player in AllPlayers.Values)
+            {
+                PlayerSnapshot Snapshot = Player.PositionTrace.GetSnapshot(Player.PlayerEntity, Player.InternalTeam);
+                Snapshot.Map = Map;
+                Snapshot.RoundId = RoundId+1;
+                ReturnSnapshots.Add(Snapshot);
+            }
+            Snapshots.AddRange(ReturnSnapshots);
         }
         /// <summary>
         /// Calculates the centroid of the team so it can be tracked. Called during parsing.

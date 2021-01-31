@@ -19,11 +19,12 @@ namespace MatchTraceGenerator
 
             (int SuccessCount, int FailCount) FileCount = (0, 0);
             List<PlayerMatchTrace> MatchOutputTraces = new List<PlayerMatchTrace>();
+            List<PlayerSnapshot> AllSnapshots = new List<PlayerSnapshot>();
             foreach (var file in Files)
             {
                 string fileName = dir + file.Name;
 
-                List<PlayerMatchTrace> FullMatchTraces = ParseFile(fileName);
+                (List<PlayerMatchTrace> FullMatchTraces, List<PlayerSnapshot> Snapshots) = ParseFile(fileName);
 
                 if (FullMatchTraces.Count == 0)
                 {
@@ -38,7 +39,12 @@ namespace MatchTraceGenerator
                     {
                         Trace.MatchId = FileCount.SuccessCount;
                     }
+                    foreach (var Snapshot in Snapshots)
+                    {
+                        Snapshot.MatchId = FileCount.SuccessCount;
+                    }
                     MatchOutputTraces.AddRange(FullMatchTraces);
+                    AllSnapshots.AddRange(Snapshots);
                     
                 }
                 Console.Write("\rSuccess: {0} - Failure: {1}", FileCount.SuccessCount, FileCount.FailCount);
@@ -55,11 +61,20 @@ namespace MatchTraceGenerator
                 writer.Flush();
             }
 
+            using (var writer = new StreamWriter(@"C:\\Users\\jawas\\Documents\\Titulo\\snapshot_output.csv"))
+            using (var csv = new CsvWriter(writer, System.Globalization.CultureInfo.CurrentCulture))
+            {
+                csv.Configuration.HasHeaderRecord = true;
+                csv.Configuration.AutoMap<PlayerSnapshot>();
+                csv.WriteRecords(AllSnapshots);
+                writer.Flush();
+            }
+
             Console.WriteLine("\nTotal files parsed: {0}", FileCount.SuccessCount + FileCount.FailCount);
             Console.WriteLine("Finished writing!");
             Console.ReadKey();
         }
-        static List<PlayerMatchTrace> ParseFile(string fileName)
+        static (List<PlayerMatchTrace>,List<PlayerSnapshot>) ParseFile(string fileName)
         {
             int PreviousTick = -1;
 
@@ -73,6 +88,10 @@ namespace MatchTraceGenerator
 
             // Current round info
             double ElapsedTime = 0;
+            double ElapsedTicks = 0;
+
+            // Tick position retrieval span
+            double TimeDelta = 1.0f;
 
 
             using (var fileStream = File.OpenRead(fileName))
@@ -84,14 +103,15 @@ namespace MatchTraceGenerator
                     HashSet<string> validMaps = new HashSet<string>() { "de_inferno", "de_dust2", "de_mirage", "de_nuke" };
 
                     if (!validMaps.Contains(map) || parser.TickRate <= 0)
-                        return FullMatchTraces;
+                        return (FullMatchTraces,new List<PlayerSnapshot>());
 
                     // The parser doesn't consider teams, but instead players with team tags which makes them hard to track.
                     // Furthermore, scores can only be checked per team as in 'Terrorist' or 'CTerrorist', making it a pain in the ass
                     // since teams are swapped after 15 rounds.
                     // So a team tracker, to track team members and scores of the team
                     TeamTracker TeamTracker = new TeamTracker(parser);
-
+                    int TickDelta = (int)Math.Round(TimeDelta / parser.TickTime,0);
+                    //Console.WriteLine($"Retrieving traces every {TickDelta} ticks, amounting to {parser.TickTime*TickDelta} seconds.");
 
                     parser.MatchStarted += (sender, e) =>
                     {
@@ -113,6 +133,7 @@ namespace MatchTraceGenerator
 
                         RoundStarted = true;
                         ElapsedTime = 0;
+                        ElapsedTicks = 0;
 
                         TeamTracker.CheckSwitch(parser.PlayingParticipants);
 
@@ -143,11 +164,19 @@ namespace MatchTraceGenerator
                             TeamTracker.CorrectTeams(parser.PlayingParticipants);
                             return;
                         }
+                        ElapsedTicks += 1;
 
                         // Update team information in every tick
                         TeamTracker.UpdatePlayerStats(parser.PlayingParticipants, parser.TickTime);
 
                         TeamTracker.CalculatePlayerStats(ElapsedTime);
+                        if (ElapsedTicks % TickDelta != 0)
+                        {
+                            TeamTracker.RecordPositions();
+                        } else
+                        {
+                            TeamTracker.GetSnapshots();
+                        }
 
                     };
                     parser.NadeReachedTarget += (sender, e) =>
@@ -235,7 +264,7 @@ namespace MatchTraceGenerator
 
                             // Sometimes it get stuck without proceeding through the ticks,
                             // so we check make sure this is not the case 
-                            if (parser.CurrentTick == PreviousTick) return new List<PlayerMatchTrace>();
+                            if (parser.CurrentTick == PreviousTick) return (new List<PlayerMatchTrace>(),new List<PlayerSnapshot>());
 
                             // End of match
                             if (parser.TScore == 16 || parser.CTScore == 16 || (parser.TScore, parser.CTScore).Equals((15, 15)))
@@ -258,7 +287,7 @@ namespace MatchTraceGenerator
                             if (CompleteMatch) break;
 
                         }
-                        return FullMatchTraces;
+                        return (FullMatchTraces,TeamTracker.Snapshots);
                     }
                     catch (Exception e)
                     {
@@ -272,7 +301,7 @@ namespace MatchTraceGenerator
                         Console.ReadKey();
                         */
 
-                        return new List<PlayerMatchTrace>();
+                        return (new List<PlayerMatchTrace>(),new List<PlayerSnapshot>());
 
                     }
                 }

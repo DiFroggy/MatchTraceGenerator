@@ -54,6 +54,9 @@ namespace MatchTraceGenerator
             { 0 , 0 }, { 1 , 0 }, { 2 , 0 }, { 3 , 0 }, { 4 , 0 }
         };
 
+        // Player position snapshot
+        public PositionHandler PositionTrace = new PositionHandler();
+
         // Reference to the player entity from the parser
         public Player PlayerEntity { get; set; }
         public Dictionary<EquipmentElement, int> ElementMatchFreq = new Dictionary<EquipmentElement, int>();
@@ -65,6 +68,39 @@ namespace MatchTraceGenerator
             foreach (EquipmentElement item in Enum.GetValues(typeof(EquipmentElement)))
             {
                 ElementMatchFreq.Add(item, 0);
+            }
+        }
+
+        public class PositionHandler{
+            Vector InitialPosition;
+            int Id = 1;
+            List<double> Velocities = new List<double>();
+            public void SetPosition(Player PlayerEntity)
+            {
+                if (InitialPosition == null) InitialPosition = PlayerEntity.Position.Copy();
+                Velocities.Add(PlayerEntity.Velocity.Absolute);
+            }
+            public PlayerSnapshot GetSnapshot(Player PlayerEntity,byte InternalTeamId)
+            {
+                Vector FinalPosition = PlayerEntity.Position.Copy();
+
+                PlayerSnapshot playerSnapshot = new PlayerSnapshot()
+                {
+                    TickId = Id,
+                    SteamId = PlayerEntity.SteamID,
+                    InternalTeamId = InternalTeamId,
+                    Team = PlayerEntity.Team.ToString(),
+
+                    PosX = FinalPosition.X,
+                    PosY = FinalPosition.Y,
+                    PosZ = FinalPosition.Z,
+                    MovAngle = (FinalPosition - InitialPosition).Angle2D*180/Math.PI,
+                    MovVelocity = Velocities.Average(),
+                };
+                Id += 1;
+                InitialPosition = null;
+                Velocities = new List<double>();
+                return playerSnapshot;
             }
         }
         public void RecordElement(Equipment Element)
