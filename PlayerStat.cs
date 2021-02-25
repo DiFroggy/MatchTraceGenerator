@@ -59,14 +59,16 @@ namespace MatchTraceGenerator
 
         // Reference to the player entity from the parser
         public Player PlayerEntity { get; set; }
+        public Dictionary<EquipmentElement, int> ElementRoundFreq = new Dictionary<EquipmentElement, int>();
         public Dictionary<EquipmentElement, int> ElementMatchFreq = new Dictionary<EquipmentElement, int>();
-        public int TotalMatchFreq = 0;
+        public int TotalRoundFreq = 0,TotalMatchFreq = 0;
         public PlayerStat(Player PReference)
         {
             PlayerEntity = PReference;
             SteamId = PReference.SteamID;
             foreach (EquipmentElement item in Enum.GetValues(typeof(EquipmentElement)))
             {
+                ElementRoundFreq.Add(item, 0);
                 ElementMatchFreq.Add(item, 0);
             }
         }
@@ -105,6 +107,8 @@ namespace MatchTraceGenerator
         }
         public void RecordElement(Equipment Element)
         {
+            TotalRoundFreq += 1;
+            ElementRoundFreq[Element.Weapon] = ElementRoundFreq[Element.Weapon] + 1;
             TotalMatchFreq += 1;
             ElementMatchFreq[Element.Weapon] = ElementMatchFreq[Element.Weapon] + 1;
         }
@@ -135,6 +139,12 @@ namespace MatchTraceGenerator
             RoundHeadshots = 0;
             KillDistance = new List<double>();
             RoundFlankKills = 0;
+
+            TotalRoundFreq = 0;
+            foreach (EquipmentElement item in Enum.GetValues(typeof(EquipmentElement)))
+            {
+                ElementRoundFreq[item] = 0;
+            }
         }
         public void ResetMatchData()
         {

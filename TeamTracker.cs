@@ -39,6 +39,8 @@ namespace MatchTraceGenerator
         bool PossibleClutch = false;
         long LastAlive;
 
+        // RoundTraces
+        public List<PlayerRoundTrace> RoundTraces = new List<PlayerRoundTrace>();
         // PositionTraces
         public List<PlayerSnapshot> Snapshots = new List<PlayerSnapshot>();
 
@@ -516,6 +518,37 @@ namespace MatchTraceGenerator
                     // Average round centroid distance
                     double CentroidDistance = Player.CentroidDistances.Count > 0 ? CalculateAvgCentroidDistance(Player.CentroidDistances) : 0;
 
+                    List<double> HeldElements = new List<double>();
+                    foreach (EquipmentElement item in Enum.GetValues(typeof(EquipmentElement)))
+                    {
+                        HeldElements.Add((double)Player.ElementRoundFreq[item] / (double)Player.TotalRoundFreq);
+                    }
+
+                    RoundTraces.Add(new PlayerRoundTrace()
+                    {
+                        Map = Map,
+                        Team = Player.LastCheckedTeam,
+                        InternalTeamId = Player.InternalTeam,
+                        RoundId = RoundId,
+                        SteamId = Player.SteamId,
+                      
+                        TimeAlive = Player.TickSum/TickRate,
+
+                        RoundWinner = RoundResult,
+                        FirstDeath = FirstDeath == Player.SteamId,
+                        FirstKill = FirstKiller == Player.SteamId,
+                        // BombCarrier =
+
+                        Kills = Player.RoundKills,
+                        Assists = Player.RoundAssists,
+                        Headshots = Player.RoundHeadshots,
+                        FlankKills = Player.RoundFlankKills,
+                        LGrenadesThrown = Player.RoundLethalGrenades,
+                        NLGrenadesThrown = Player.RoundNonLethalGrenades,
+                        AvgKillDistance = Player.RoundKills !=0 ? Player.KillDistance.Average() : -500,
+
+                        HeldElement = HeldElements,
+                    });
                     // Add to match records
                     Player.MatchCentroidDistance.Add(CentroidDistance);
                     Player.MatchSiteDistance.Add(SiteDistance);
@@ -592,9 +625,9 @@ namespace MatchTraceGenerator
                 }
             }
         }
-        public List<PlayerMatchTrace> CompleteMatch()
+        public (List<PlayerRoundTrace>,List<PlayerMatchTrace>) CompleteMatch()
         {
-            return ReturnTraces;
+            return (RoundTraces,ReturnTraces);
         }
     }
 }

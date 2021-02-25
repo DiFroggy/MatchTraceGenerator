@@ -63,6 +63,8 @@
   <ItemGroup>
     <Compile Include="PlayerMatchTrace.cs" />
     <Compile Include="PlayerMatchTraceMap.cs" />
+    <Compile Include="PlayerRoundTrace.cs" />
+    <Compile Include="PlayerRoundTraceMap.cs" />
     <Compile Include="PlayerSnapshot.cs" />
     <Compile Include="PlayerStat.cs" />
     <Compile Include="Program.cs" />

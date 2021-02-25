@@ -19,12 +19,15 @@ namespace MatchTraceGenerator
 
             (int SuccessCount, int FailCount) FileCount = (0, 0);
             List<PlayerMatchTrace> MatchOutputTraces = new List<PlayerMatchTrace>();
+            List<PlayerRoundTrace> RoundOutputTraces = new List<PlayerRoundTrace>();
             List<PlayerSnapshot> AllSnapshots = new List<PlayerSnapshot>();
             foreach (var file in Files)
             {
                 string fileName = dir + file.Name;
 
-                (List<PlayerMatchTrace> FullMatchTraces, List<PlayerSnapshot> Snapshots) = ParseFile(fileName);
+                (List<PlayerRoundTrace> FullRoundTraces,
+                    List<PlayerMatchTrace> FullMatchTraces, 
+                    List<PlayerSnapshot> Snapshots) = ParseFile(fileName);
 
                 if (FullMatchTraces.Count == 0)
                 {
@@ -35,6 +38,10 @@ namespace MatchTraceGenerator
                 {
                     FileCount.SuccessCount++;
                     
+                    foreach(var Trace in FullRoundTraces)
+                    {
+                        Trace.MatchId = FileCount.SuccessCount;
+                    }
                     foreach (var Trace in FullMatchTraces)
                     {
                         Trace.MatchId = FileCount.SuccessCount;
@@ -43,15 +50,24 @@ namespace MatchTraceGenerator
                     {
                         Snapshot.MatchId = FileCount.SuccessCount;
                     }
+                    RoundOutputTraces.AddRange(FullRoundTraces);
                     MatchOutputTraces.AddRange(FullMatchTraces);
                     AllSnapshots.AddRange(Snapshots);
                     
                 }
                 Console.Write("\rSuccess: {0} - Failure: {1}", FileCount.SuccessCount, FileCount.FailCount);
 
-                //if (FileCount.SuccessCount == 2) break;
+                //if (FileCount.SuccessCount == 5) break;
             }
 
+            using (var writer = new StreamWriter(@"C:\\Users\\jawas\\Documents\\Titulo\\round_output.csv"))
+            using (var csv = new CsvWriter(writer, System.Globalization.CultureInfo.CurrentCulture))
+            {
+                csv.Configuration.HasHeaderRecord = true;
+                csv.Configuration.RegisterClassMap<PlayerRoundTraceMap>();
+                csv.WriteRecords(RoundOutputTraces);
+                writer.Flush();
+            }
             using (var writer = new StreamWriter(@"C:\\Users\\jawas\\Documents\\Titulo\\match_output.csv"))
             using (var csv = new CsvWriter(writer, System.Globalization.CultureInfo.CurrentCulture))
             {
@@ -74,10 +90,11 @@ namespace MatchTraceGenerator
             Console.WriteLine("Finished writing!");
             Console.ReadKey();
         }
-        static (List<PlayerMatchTrace>,List<PlayerSnapshot>) ParseFile(string fileName)
+        static (List<PlayerRoundTrace>,List<PlayerMatchTrace>,List<PlayerSnapshot>) ParseFile(string fileName)
         {
             int PreviousTick = -1;
 
+            List<PlayerRoundTrace> FullRoundTraces = new List<PlayerRoundTrace>();
             List<PlayerMatchTrace> FullMatchTraces = new List<PlayerMatchTrace>();
 
             // Consider only behaviour of active rounds and matches
@@ -103,7 +120,7 @@ namespace MatchTraceGenerator
                     HashSet<string> validMaps = new HashSet<string>() { "de_inferno", "de_dust2", "de_mirage", "de_nuke" };
 
                     if (!validMaps.Contains(map) || parser.TickRate <= 0)
-                        return (FullMatchTraces,new List<PlayerSnapshot>());
+                        return (FullRoundTraces,FullMatchTraces,new List<PlayerSnapshot>());
 
                     // The parser doesn't consider teams, but instead players with team tags which makes them hard to track.
                     // Furthermore, scores can only be checked per team as in 'Terrorist' or 'CTerrorist', making it a pain in the ass
@@ -120,6 +137,7 @@ namespace MatchTraceGenerator
                         {
                             TeamTracker = new TeamTracker(parser);
                             FullMatchTraces = new List<PlayerMatchTrace>();
+                            FullRoundTraces = new List<PlayerRoundTrace>();
                         }
                         MatchStarted = true;
                     };
@@ -259,12 +277,16 @@ namespace MatchTraceGenerator
                                         Trace.AbnormalMatch = true;
                                         Trace.Map = parser.Map;
                                     }
+                                    foreach (var Trace in FullRoundTraces)
+                                    {
+                                        Trace.AbnormalMatch = true;
+                                    }
                                 }
                             };
 
                             // Sometimes it get stuck without proceeding through the ticks,
                             // so we check make sure this is not the case 
-                            if (parser.CurrentTick == PreviousTick) return (new List<PlayerMatchTrace>(),new List<PlayerSnapshot>());
+                            if (parser.CurrentTick == PreviousTick) return (new List<PlayerRoundTrace>(),new List<PlayerMatchTrace>(),new List<PlayerSnapshot>());
 
                             // End of match
                             if (parser.TScore == 16 || parser.CTScore == 16 || (parser.TScore, parser.CTScore).Equals((15, 15)))
@@ -275,19 +297,24 @@ namespace MatchTraceGenerator
                                 // TODO: Meter estos en resumematch
                                 int WinnerTeam = TeamTracker.CheckWinner(parser.TScore, parser.CTScore);
                                 bool AbnormalMatch = TeamTracker.CompareScores(parser.TScore, parser.CTScore);
-                                
-                                FullMatchTraces.AddRange(TeamTracker.CompleteMatch());
+                                (List<PlayerRoundTrace>, List<PlayerMatchTrace>) Result = TeamTracker.CompleteMatch();
+                                FullRoundTraces.AddRange(Result.Item1);
+                                FullMatchTraces.AddRange(Result.Item2);
                                 foreach (var Trace in FullMatchTraces)
                                 {
                                     Trace.AbnormalMatch = AbnormalMatch;
                                     Trace.MatchWinner = Trace.InternalTeamId == WinnerTeam;
+                                }
+                                foreach (var Trace in FullRoundTraces)
+                                {
+                                    Trace.AbnormalMatch = AbnormalMatch;
                                 }
                             }
 
                             if (CompleteMatch) break;
 
                         }
-                        return (FullMatchTraces,TeamTracker.Snapshots);
+                        return (FullRoundTraces,FullMatchTraces,TeamTracker.Snapshots);
                     }
                     catch (Exception e)
                     {
@@ -301,7 +328,7 @@ namespace MatchTraceGenerator
                         Console.ReadKey();
                         */
 
-                        return (new List<PlayerMatchTrace>(),new List<PlayerSnapshot>());
+                        return (new List<PlayerRoundTrace>(),new List<PlayerMatchTrace>(),new List<PlayerSnapshot>());
 
                     }
                 }
