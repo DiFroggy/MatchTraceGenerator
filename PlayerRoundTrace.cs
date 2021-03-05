@@ -17,6 +17,7 @@ namespace MatchTraceGenerator
         public long SteamId { get; set; }
         public bool AbnormalMatch { get; set; }
         public float TimeAlive { get; set; }
+        public int TeamStartingEquipmentValue { get; set; }
         // Round flags
         public bool RoundWinner { get; set; }
         public bool FirstDeath { get; set; }

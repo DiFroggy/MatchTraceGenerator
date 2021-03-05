@@ -490,6 +490,11 @@ namespace MatchTraceGenerator
             {
                 HashSet<long> CurrentTeam = teamId == 1 ? ref TeamMembers.Item1 : ref TeamMembers.Item2;
 
+                int TotalEquipmentValue = 0;
+                foreach (var PlayerKey in CurrentTeam)
+                {
+                    TotalEquipmentValue+= AllPlayers[PlayerKey].PlayerEntity.FreezetimeEndEquipmentValue;
+                }
 
                 // Iterate over all players of this team
                 foreach (var PlayerKey in CurrentTeam)
@@ -533,6 +538,7 @@ namespace MatchTraceGenerator
                         SteamId = Player.SteamId,
                       
                         TimeAlive = Player.TickSum/TickRate,
+                        TeamStartingEquipmentValue = TotalEquipmentValue,
 
                         RoundWinner = RoundResult,
                         FirstDeath = FirstDeath == Player.SteamId,
