@@ -203,23 +203,30 @@ namespace MatchTraceGenerator
                         if (e.ThrownBy == null) return;
 
                     };
-                    parser.DecoyNadeStarted += (sender, e) =>
+                    parser.ExplosiveNadeExploded += (sender, e) =>
                     {
                         if (!RoundStarted || !MatchStarted || !TeamTracker.ProperlySetTeams) return;
                         if (e.ThrownBy == null) return;
 
+                        TeamTracker.RecordPressure(e.ThrownBy.SteamID, e.Position);
+                    };
+                    parser.DecoyNadeStarted += (sender, e) =>
+                    {
+                        if (!RoundStarted || !MatchStarted || !TeamTracker.ProperlySetTeams) return;
+                        if (e.ThrownBy == null) return;
+                        TeamTracker.RecordPressure(e.ThrownBy.SteamID, e.Position);
                     };
                     parser.SmokeNadeStarted += (sender, e) =>
                     {
                         if (!RoundStarted || !MatchStarted || !TeamTracker.ProperlySetTeams) return;
                         if (e.ThrownBy == null) return;
-
+                        TeamTracker.RecordPressure(e.ThrownBy.SteamID, e.Position);
                     };
                     parser.FireNadeStarted += (sender, e) =>
                     {
                         if (!RoundStarted || !MatchStarted || !TeamTracker.ProperlySetTeams) return;
                         if (e.ThrownBy == null) return;
-
+                        TeamTracker.RecordPressure(e.ThrownBy.SteamID, e.Position);
                     };
                     parser.WeaponFired += (sender, e) =>
                     {
@@ -232,6 +239,12 @@ namespace MatchTraceGenerator
                         {
                             case EquipmentClass.Grenade:
                                 TeamTracker.GrenadeThrownEvent(e.Shooter.SteamID, e.Weapon);
+                                break;
+                            case EquipmentClass.Heavy:
+                            case EquipmentClass.SMG:
+                            case EquipmentClass.Rifle:
+                            case EquipmentClass.Pistol:
+                                TeamTracker.RecordPressure(e);
                                 break;
                         }
 

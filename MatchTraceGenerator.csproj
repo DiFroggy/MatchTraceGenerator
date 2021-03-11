@@ -67,6 +67,7 @@
     <Compile Include="PlayerRoundTraceMap.cs" />
     <Compile Include="PlayerSnapshot.cs" />
     <Compile Include="PlayerStat.cs" />
+    <Compile Include="PressureMap.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TeamTracker.cs" />

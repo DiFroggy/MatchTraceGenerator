@@ -17,14 +17,16 @@ namespace MatchTraceGenerator
         public long SteamId { get; set; }
         public bool AbnormalMatch { get; set; }
         public float TimeAlive { get; set; }
-        public int TeamStartingEquipmentValue { get; set; }
         // Round flags
         public bool RoundWinner { get; set; }
         public bool FirstDeath { get; set; }
         public bool FirstKill { get; set; }
-        public bool BombCarrier { get; set; }
+        //public bool BombCarrier { get; set; }
 
         // Cumulative round data
+        public double TravelledDistance { get; set; }
+        public double AvgVelocity { get; set; }
+        public double AvgSiteDist { get; set; }
         public byte Kills { get; set; }
         public byte FlankKills { get; set; }
         public byte Assists { get; set; }
@@ -32,8 +34,15 @@ namespace MatchTraceGenerator
         public int LGrenadesThrown { get; set; }
         public int NLGrenadesThrown { get; set; }
         public double AvgKillDistance { get; set; }
+        public int TeamStartingEquipmentValue { get; set; }
+        public int StartingEquipmentValue { get; set; }
+
 
         // Revamped held variables
         public List<double> HeldElement { get; set; }
+
+        // Second iteration variables
+        public double TotalPressure { get; set; }
+
     }
 }

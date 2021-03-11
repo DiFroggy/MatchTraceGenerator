@@ -35,6 +35,10 @@ namespace MatchTraceGenerator
         // Manually keep track of scores
         (int, int) Scores = (0, 0);
 
+        // Pressure maps for each team
+        PressureMap Team1 = new PressureMap();
+        PressureMap Team2 = new PressureMap();
+
         // Clutch checker
         bool PossibleClutch = false;
         long LastAlive;
@@ -203,6 +207,8 @@ namespace MatchTraceGenerator
         {
             if (!ProperlySetTeams) return;
             RoundTickSum++;
+            Team1.Cooldown(Delta);
+            Team2.Cooldown(Delta);
             foreach (var player in PlayingParticipants)
             {
 
@@ -216,6 +222,8 @@ namespace MatchTraceGenerator
                 // Therefore we store the team before so it can be assigned properly during trace generation
                 if (AllPlayers[player.SteamID].LastCheckedTeam == null) AllPlayers[player.SteamID].LastCheckedTeam = player.Team.ToString();
 
+                // Perceived pressure by the player
+                AllPlayers[player.SteamID].RoundPressure += TeamMembers.Item1.Contains(player.SteamID) ? Team1.PerceivedPressure(player.Position) : Team2.PerceivedPressure(player.Position);
                 // Ticksum aka time played
                 AllPlayers[player.SteamID].TickSum++;
 
@@ -400,6 +408,9 @@ namespace MatchTraceGenerator
 
                 if (Killer != null)
                 {
+                    // Add point to pressure map on death location
+                    RecordPressure(Killer.SteamID, Victim.Position);
+
                     // Don't count teamkills
                     if (TeamMembers.Item1.Contains(Killer.SteamID) && TeamMembers.Item1.Contains(Victim.SteamID) ||
                         TeamMembers.Item2.Contains(Killer.SteamID) && TeamMembers.Item2.Contains(Victim.SteamID)) return;
@@ -477,10 +488,34 @@ namespace MatchTraceGenerator
                 }
             }
         }
-
+        public void RecordPressure(WeaponFiredEventArgs e)
+        {
+            PressureMap.Line Line = new PressureMap.Line(e.Shooter.Position,200,5,e.Shooter.ViewDirectionX,5);
+            // Someone firing from one team will apply pressure in the opposite's team map
+            if (TeamMembers.Item1.Contains(e.Shooter.SteamID))
+            {
+                Team2.Lines.Add(Line);
+            }
+            else
+            {
+                Team1.Lines.Add(Line);
+            }
+        }
         /// <summary>
         /// Calculates round data once the round is over and returns a list of PlayerTraces.
         /// </summary>
+        public void RecordPressure(long Shooter,Vector Location)
+        {
+            PressureMap.Point Point = new PressureMap.Point(Location,600,5,20);
+            if (TeamMembers.Item1.Contains(Shooter))
+            {
+                Team2.Points.Add(Point);
+            }
+            else
+            {
+                Team1.Points.Add(Point);
+            }
+        }
         public void ResumeRound()
         {
             byte teamId = 1;
@@ -529,6 +564,7 @@ namespace MatchTraceGenerator
                         HeldElements.Add((double)Player.ElementRoundFreq[item] / (double)Player.TotalRoundFreq);
                     }
 
+
                     RoundTraces.Add(new PlayerRoundTrace()
                     {
                         Map = Map,
@@ -539,6 +575,10 @@ namespace MatchTraceGenerator
                       
                         TimeAlive = Player.TickSum/TickRate,
                         TeamStartingEquipmentValue = TotalEquipmentValue,
+                        StartingEquipmentValue = Player.PlayerEntity.FreezetimeEndEquipmentValue,
+                        TravelledDistance = TravelInfo.TravelledDistance,
+                        AvgVelocity = TravelInfo.AvgVelocity,
+                        AvgSiteDist = SiteDistance,
 
                         RoundWinner = RoundResult,
                         FirstDeath = FirstDeath == Player.SteamId,
@@ -552,6 +592,7 @@ namespace MatchTraceGenerator
                         LGrenadesThrown = Player.RoundLethalGrenades,
                         NLGrenadesThrown = Player.RoundNonLethalGrenades,
                         AvgKillDistance = Player.RoundKills !=0 ? Player.KillDistance.Average() : -500,
+                        TotalPressure = Player.RoundPressure,
 
                         HeldElement = HeldElements,
                     });
@@ -571,6 +612,8 @@ namespace MatchTraceGenerator
             FirstDeath = -1;
             DeadPlayers = new HashSet<long>();
             RoundTickSum = 0;
+            Team1.ResetMap();
+            Team2.ResetMap();
         }
         public void ResumeMatch()
         {

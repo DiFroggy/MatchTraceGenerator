@@ -27,6 +27,7 @@ namespace MatchTraceGenerator
         public List<double> SiteDistances { get; set; } = new List<double>();
         public List<double> KillDistance { get; set; } = new List<double>();
         public int FirstKillTick { get; set; } = 0;
+        public double RoundPressure { get; set; } = 0;
         // Cumulative match data
         public byte Kills { get; set; } = 0;
         public byte FlankKills { get; set; } = 0;
@@ -139,6 +140,7 @@ namespace MatchTraceGenerator
             RoundHeadshots = 0;
             KillDistance = new List<double>();
             RoundFlankKills = 0;
+            RoundPressure = 0;
 
             TotalRoundFreq = 0;
             foreach (EquipmentElement item in Enum.GetValues(typeof(EquipmentElement)))
