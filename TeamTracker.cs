@@ -232,6 +232,7 @@ namespace MatchTraceGenerator
                 double SiteBDist = (player.Position - PlantSites[Map].B).AbsoluteSquared;
                 AllPlayers[player.SteamID].SiteDistances.Add(SiteADist < SiteBDist ? SiteADist : SiteBDist);
 
+                AllPlayers[player.SteamID].Positions.Add(player.Position.Copy());
                 // Check active weapon
                 if (player.ActiveWeapon != null) AllPlayers[player.SteamID].RecordElement(player.ActiveWeapon);
             }
@@ -331,7 +332,7 @@ namespace MatchTraceGenerator
                 Velocities.Add(CurrentDistance);
                 PreviousPosition = Position;
             }
-            double AvgVelocity = Velocities.Sum() / VelocityElements;
+            double AvgVelocity = Velocities.Sum()*TickRate / VelocityElements;
 
             return (TravelledDistance, AvgVelocity);
         }
@@ -579,6 +580,7 @@ namespace MatchTraceGenerator
                         TravelledDistance = TravelInfo.TravelledDistance,
                         AvgVelocity = TravelInfo.AvgVelocity,
                         AvgSiteDist = SiteDistance,
+                        AvgCentDistance = CentroidDistance,
 
                         RoundWinner = RoundResult,
                         FirstDeath = FirstDeath == Player.SteamId,

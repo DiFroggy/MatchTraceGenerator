@@ -34,6 +34,7 @@ namespace MatchTraceGenerator
         public int LGrenadesThrown { get; set; }
         public int NLGrenadesThrown { get; set; }
         public double AvgKillDistance { get; set; }
+        public double AvgCentDistance { get; set; }
         public int TeamStartingEquipmentValue { get; set; }
         public int StartingEquipmentValue { get; set; }
 
